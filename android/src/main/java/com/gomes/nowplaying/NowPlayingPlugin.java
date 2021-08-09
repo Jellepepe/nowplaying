@@ -24,6 +24,7 @@ import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding;
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
 import io.flutter.plugin.common.MethodCall;
 import io.flutter.plugin.common.MethodChannel;
+import io.flutter.plugin.common.EventChannel;
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler;
 import io.flutter.plugin.common.MethodChannel.Result;
 import java.io.ByteArrayOutputStream;
@@ -34,7 +35,7 @@ import java.util.Map;
 // import android.util.Log;
 
 /** NowPlayingPlugin */
-public class NowPlayingPlugin implements FlutterPlugin, MethodCallHandler, ActivityAware {
+public class NowPlayingPlugin implements FlutterPlugin, MethodCallHandler, EventChannel.StreamHandler, ActivityAware {
   public static final String ACTION = "com.gomes.nowplaying";
 
   private static final String ENABLED_NOTIFICATION_LISTENERS =
@@ -58,9 +59,11 @@ public class NowPlayingPlugin implements FlutterPlugin, MethodCallHandler, Activ
   /// and unregister it
   /// when the Flutter Engine is detached from the Activity
   private MethodChannel channel;
+  private EventChannel streamChannel;
   private ChangeBroadcastReceiver changeBroadcastReceiver;
   private Context context;
   private Map<String, Object> trackData = new HashMap<>();
+  private Map<Object, EventChannel.EventSink> listeners = new HashMap<>();
 
   @Override
   public void onMethodCall(@NonNull MethodCall call, @NonNull Result result) {
@@ -98,6 +101,16 @@ public class NowPlayingPlugin implements FlutterPlugin, MethodCallHandler, Activ
     detach();
   }
 
+  @Override
+    public void onListen(Object listener, EventChannel.EventSink eventSink) {
+      listeners.put(listener, eventSink);
+  }
+    
+  @Override
+  public void onCancel(Object listener) {
+      listeners.remove(listener);
+  }
+
   private void attach(ActivityPluginBinding binding) {
     context = binding.getActivity();
     changeBroadcastReceiver = new ChangeBroadcastReceiver();
@@ -130,6 +143,8 @@ public class NowPlayingPlugin implements FlutterPlugin, MethodCallHandler, Activ
   public void onAttachedToEngine(@NonNull FlutterPluginBinding flutterPluginBinding) {
     channel = new MethodChannel(flutterPluginBinding.getBinaryMessenger(), "gomes.com.es/nowplaying");
     channel.setMethodCallHandler(this);
+    streamChannel = new EventChannel(flutterPluginBinding.getBinaryMessenger(), "gomes.com.es/nowplayingstream");
+    streamChannel.setStreamHandler(this);
   }
 
   public class ChangeBroadcastReceiver extends BroadcastReceiver {
@@ -168,7 +183,9 @@ public class NowPlayingPlugin implements FlutterPlugin, MethodCallHandler, Activ
     ArrayList<Object> arguments = new ArrayList<>();
     arguments.add(data);
 
-    channel.invokeMethod(COMMAND_TRACK, arguments);
+    for(HashMap.Entry<Object, EventChannel.EventSink> entry : listeners.entrySet()) {
+      entry.getValue().success(data);
+    }
   }
 
   private Map<String, Object> extractFieldsFor(MediaSession.Token token, Icon icon) {

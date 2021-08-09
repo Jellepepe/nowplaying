@@ -22,7 +22,11 @@ bool get isAndroid => !kIsWeb && Platform.isAndroid;
 /// channel to pull out track data.
 class NowPlaying with WidgetsBindingObserver {
   static const _channel = const MethodChannel('gomes.com.es/nowplaying');
+  static const streamChannel = const EventChannel('gomes.com.es/nowplayingstream');
   static const _refreshPeriod = const Duration(seconds: 1);
+  static Stream<dynamic> _rawTrackStream = streamChannel.receiveBroadcastStream();
+
+  StreamSubscription? _rawTrackStreamSubscription;
 
   StreamController<NowPlayingTrack>? _controller;
   Stream<NowPlayingTrack> get stream => _controller!.stream;
@@ -51,7 +55,7 @@ class NowPlaying with WidgetsBindingObserver {
     _controller!.add(NowPlayingTrack.notPlaying);
 
     await _bindToWidgetsBinding();
-    if (isAndroid) _channel.setMethodCallHandler(_handler);
+    if (isAndroid) _rawTrackStreamSubscription = _rawTrackStream.listen((data) => _updateAndNotifyFor(NowPlayingTrack.fromJson(Map<String, dynamic>.from(data ?? {}))));
     if (isIOS) _refreshTimer = Timer.periodic(_refreshPeriod, _refresh);
 
     final info = await PackageInfo.fromPlatform();
@@ -68,7 +72,7 @@ class NowPlaying with WidgetsBindingObserver {
     _controller = null;
 
     WidgetsBinding.instance!.removeObserver(this);
-    if (isAndroid) _channel.setMethodCallHandler(null);
+    if (isAndroid) _rawTrackStreamSubscription?.cancel();
     if (isIOS) {
       _refreshTimer?.cancel();
       _refreshTimer = null;
@@ -116,16 +120,6 @@ class NowPlaying with WidgetsBindingObserver {
     await _channel.invokeMethod<bool>('requestPermissions');
     return true;
   }
-
-  // Android
-  Future<dynamic> _handler(MethodCall call) async {
-    if (call.method == 'track') {
-      final data = Map<String, Object>.from(call.arguments[0] ?? {});
-      _updateAndNotifyFor(NowPlayingTrack.fromJson(data));
-    }
-    return true;
-  }
-  // /Android
 
   // iOS
   Future<void> _refresh([_]) async {
