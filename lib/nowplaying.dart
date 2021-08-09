@@ -91,7 +91,7 @@ class NowPlaying with WidgetsBindingObserver {
 
   /// Returns true is the service has permission granted by the systme and user
   Future<bool> isEnabled() async =>
-      isIOS || await (_channel.invokeMethod<bool>('isEnabled') as FutureOr<bool>);
+      isIOS || (await _channel.invokeMethod<bool?>('isEnabled') ?? false);
 
   /// Opens an OS settings page
   ///
@@ -130,7 +130,7 @@ class NowPlaying with WidgetsBindingObserver {
   // iOS
   Future<void> _refresh([_]) async {
     final data = await _channel.invokeMethod('track');
-    final json = Map<String, Object>.from(data);
+    final json = Map<String, Object?>.from(data);
     final track = NowPlayingTrack.fromJson(json);
     if (_shouldNotifyFor(track)) _updateAndNotifyFor(track);
   }
