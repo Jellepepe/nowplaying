@@ -18,6 +18,12 @@ import 'package:path_provider/path_provider.dart';
 bool get isIOS => !kIsWeb && Platform.isIOS;
 bool get isAndroid => !kIsWeb && Platform.isAndroid;
 
+enum MediaKey {
+  Next,
+  Previous,
+  PlayPause
+}
+
 /// A container for the service. Connects with the underlying OS via a method
 /// channel to pull out track data.
 class NowPlaying with WidgetsBindingObserver {
@@ -77,6 +83,10 @@ class NowPlaying with WidgetsBindingObserver {
       _refreshTimer?.cancel();
       _refreshTimer = null;
     }
+  }
+
+  void sendMediaCommand(MediaKey command) async {
+    await _channel.invokeMethod("media"+command.toString().split('.')[1]);
   }
 
   void _updateAndNotifyFor(NowPlayingTrack track) {

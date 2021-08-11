@@ -14,11 +14,13 @@ import android.graphics.drawable.Drawable;
 import android.graphics.drawable.VectorDrawable;
 import android.graphics.drawable.Icon;
 import android.media.MediaMetadata;
+import android.media.AudioManager;
 import android.media.session.MediaController;
 import android.media.session.MediaSession;
 import android.media.session.PlaybackState;
 import android.provider.Settings;
 import android.text.TextUtils;
+import android.view.KeyEvent;
 import io.flutter.embedding.engine.plugins.activity.ActivityAware;
 import io.flutter.embedding.engine.plugins.activity.ActivityPluginBinding;
 import io.flutter.embedding.engine.plugins.FlutterPlugin;
@@ -46,6 +48,9 @@ public class NowPlayingPlugin implements FlutterPlugin, MethodCallHandler, Event
   private static final String COMMAND_TRACK = "track";
   private static final String COMMAND_ENABLED = "isEnabled";
   private static final String COMMAND_REQUEST_PERMISSIONS = "requestPermissions";
+  private static final String COMMAND_NEXT = "mediaNext";
+  private static final String COMMAND_PREVIOUS = "mediaPrevious";
+  private static final String COMMAND_PLAY_PAUSE = "mediaPlayPause";
 
   private static final int STATE_PLAYING = 0;
   private static final int STATE_PAUSED = 1;
@@ -75,6 +80,15 @@ public class NowPlayingPlugin implements FlutterPlugin, MethodCallHandler, Event
     } else if (COMMAND_REQUEST_PERMISSIONS.equals(call.method)) {
       final boolean isEnabled = isNotificationListenerServiceEnabled();
       if (!isEnabled) context.startActivity(new Intent(ACTION_NOTIFICATION_LISTENER_SETTINGS));
+      result.success(true);
+    } else if (COMMAND_NEXT.equals(call.method)) {
+      sendMediaCommmand(KeyEvent.KEYCODE_MEDIA_NEXT);
+      result.success(true);
+    } else if (COMMAND_PREVIOUS.equals(call.method)) {
+      sendMediaCommmand(KeyEvent.KEYCODE_MEDIA_PREVIOUS);
+      result.success(true);
+    } else if (COMMAND_PLAY_PAUSE.equals(call.method)) {
+      sendMediaCommmand(KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE);
       result.success(true);
     } else {
       result.notImplemented();
@@ -164,6 +178,12 @@ public class NowPlayingPlugin implements FlutterPlugin, MethodCallHandler, Event
         }
       }
     }
+  }
+
+  void sendMediaCommmand(int code) {
+    AudioManager mAudioManager = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+    mAudioManager.dispatchMediaKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, code));
+    mAudioManager.dispatchMediaKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, code));
   }
 
   void finishPlaying(MediaSession.Token token) {
