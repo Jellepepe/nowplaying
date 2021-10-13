@@ -243,12 +243,14 @@ public class NowPlayingPlugin implements FlutterPlugin, MethodCallHandler, Event
 
       data.put("sourceIcon", convertIcon(icon));
 
-      byte[] image = extractBitmap((Bitmap) mediaMetadata.getBitmap(MediaMetadata.METADATA_KEY_ART));
+      byte[] image = extractBitmap((Bitmap) mediaMetadata.getBitmap(MediaMetadata.METADATA_KEY_DISPLAY_ICON));
+      if (image == null) image = extractBitmap((Bitmap) mediaMetadata.getBitmap(MediaMetadata.METADATA_KEY_ART));
       if (image == null) image = extractBitmap((Bitmap) mediaMetadata.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART));
       if (image != null) {
         data.put("image", image);
       } else {
-        String imageUri = mediaMetadata.getString(MediaMetadata.METADATA_KEY_ART_URI);
+        String imageUri = mediaMetadata.getString(MediaMetadata.METADATA_KEY_DISPLAY_ICON_URI);
+        if (imageUri == null) imageUri = mediaMetadata.getString(MediaMetadata.METADATA_KEY_ART_URI);
         if (imageUri == null) imageUri = mediaMetadata.getString(MediaMetadata.METADATA_KEY_ALBUM_ART_URI);
         data.put("imageUri", imageUri);
       }
